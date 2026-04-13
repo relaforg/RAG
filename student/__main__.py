@@ -1,8 +1,9 @@
 from fire import Fire
+from student.indexing import Index
 
 
-def test():
-    print("dsadasds")
+def index(max_chunck_size: int = 2000):
+    Index(max_chunck_size).index()
 
 
 if (__name__ == "__main__"):

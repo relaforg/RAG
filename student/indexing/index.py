@@ -1,0 +1,64 @@
+import json
+from langchain_text_splitters import (
+    RecursiveCharacterTextSplitter,
+    Language
+)
+from pathlib import Path
+
+from student.models import MinimalSource
+from student.color import GREEN, RESET
+
+
+class Index:
+    def __init__(self, max_chunk_size: int):
+        self.dataset_path = "data/raw/vllm-0.10.1"
+        self.max_chunk_size = max_chunk_size
+        self.python_splitter = RecursiveCharacterTextSplitter.from_language(
+            language=Language.PYTHON,
+            chunk_size=self.max_chunk_size,
+            chunk_overlap=0
+        )
+        self.markdown_splitter = RecursiveCharacterTextSplitter.from_language(
+            language=Language.MARKDOWN,
+            chunk_size=self.max_chunk_size,
+            chunk_overlap=0
+        )
+
+    def _split_mardowns(self, out: list[MinimalSource]):
+        md_files = Path(self.dataset_path).rglob("*.md")
+        for md in md_files:
+            idx = 0
+            for chunck in self.markdown_splitter.split_text(md.read_text()):
+                out.append(MinimalSource(
+                    file_path=str(md),
+                    first_character_index=idx,
+                    last_character_index=idx + len(chunck) - 1
+                ))
+                idx += len(chunck)
+
+    def _split_pythons(self, out: list[MinimalSource]):
+        py_files = Path(self.dataset_path).rglob("*.py")
+        for py in py_files:
+            idx = 0
+            for chunck in self.python_splitter.split_text(py.read_text()):
+                out.append(MinimalSource(
+                    file_path=str(py),
+                    first_character_index=idx,
+                    last_character_index=idx + len(chunck) - 1
+                ))
+                idx += len(chunck)
+
+    def index(self) -> None:
+        out: list[MinimalSource] = []
+        self._split_mardowns(out)
+        self._split_pythons(out)
+        try:
+            chunks_file_path = Path() / "data" / "processed"
+            chunks_file_path.mkdir(parents=True, exist_ok=True)
+            with open(chunks_file_path / "chunks", "w") as file:
+                file.write(
+                    json.dumps([chunk.model_dump() for chunk in out])
+                )
+            print(f"{GREEN}Indexing done !{RESET}")
+        except (PermissionError, FileNotFoundError) as e:
+            print(e)
