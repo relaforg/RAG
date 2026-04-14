@@ -1,4 +1,5 @@
 import json
+from tqdm import tqdm
 from langchain_text_splitters import (
     RecursiveCharacterTextSplitter,
     Language
@@ -26,7 +27,7 @@ class Index:
 
     def _split_mardowns(self, out: list[MinimalSource]):
         md_files = Path(self.dataset_path).rglob("*.md")
-        for md in md_files:
+        for md in tqdm(md_files, desc="Indexing .md files", unit=" file"):
             idx = 0
             for chunck in self.markdown_splitter.split_text(md.read_text()):
                 out.append(MinimalSource(
@@ -38,7 +39,7 @@ class Index:
 
     def _split_pythons(self, out: list[MinimalSource]):
         py_files = Path(self.dataset_path).rglob("*.py")
-        for py in py_files:
+        for py in tqdm(py_files, desc="Indexing .py files", unit=" file"):
             idx = 0
             for chunck in self.python_splitter.split_text(py.read_text()):
                 out.append(MinimalSource(
@@ -59,6 +60,7 @@ class Index:
                 file.write(
                     json.dumps([chunk.model_dump() for chunk in out])
                 )
-            print(f"{GREEN}Indexing done !{RESET}")
+            print(f"{GREEN}Ingestion complete! Indices saved"
+                  f" under data/processed/{RESET}")
         except (PermissionError, FileNotFoundError) as e:
             print(e)
