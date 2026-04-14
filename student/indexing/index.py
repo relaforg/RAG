@@ -58,7 +58,10 @@ class Index:
             chunks_file_path.mkdir(parents=True, exist_ok=True)
             with open(chunks_file_path / "chunks", "w") as file:
                 file.write(
-                    json.dumps([chunk.model_dump() for chunk in out])
+                    json.dumps(
+                        [chunk.model_dump() for chunk in out],
+                        indent=4
+                    )
                 )
             print(f"{GREEN}Ingestion complete! Indices saved"
                   f" under data/processed/{RESET}")
