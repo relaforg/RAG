@@ -1,4 +1,5 @@
 import json
+import bm25s
 from tqdm import tqdm
 from langchain_text_splitters import (
     RecursiveCharacterTextSplitter,
@@ -7,7 +8,7 @@ from langchain_text_splitters import (
 from pathlib import Path
 
 from student.models import MinimalSource
-from student.color import GREEN, RESET
+from student.color import GREEN, RESET, BRIGHT_BLACK
 
 
 class Index:
@@ -24,14 +25,17 @@ class Index:
             chunk_size=self.max_chunk_size,
             chunk_overlap=0
         )
+        self.corpus: list[str] = []
 
     def _split_mardowns(self, out: list[MinimalSource]):
         md_files = Path(self.dataset_path).rglob("*.md")
         for md in tqdm(md_files, desc="Indexing .md files", unit=" file"):
             idx = 0
             for chunck in self.markdown_splitter.split_text(md.read_text()):
+                self.corpus.append(chunck)
                 out.append(MinimalSource(
                     file_path=str(md),
+                    text=chunck,
                     first_character_index=idx,
                     last_character_index=idx + len(chunck) - 1
                 ))
@@ -42,8 +46,10 @@ class Index:
         for py in tqdm(py_files, desc="Indexing .py files", unit=" file"):
             idx = 0
             for chunck in self.python_splitter.split_text(py.read_text()):
+                self.corpus.append(chunck)
                 out.append(MinimalSource(
                     file_path=str(py),
+                    text=chunck,
                     first_character_index=idx,
                     last_character_index=idx + len(chunck) - 1
                 ))
@@ -64,6 +70,11 @@ class Index:
                     )
                 )
             print(f"{GREEN}Ingestion complete! Indices saved"
-                  f" under data/processed/{RESET}")
+                  f" under data/processed/{BRIGHT_BLACK} ({len(out)} chunks)"
+                  + RESET)
         except (PermissionError, FileNotFoundError) as e:
             print(e)
+        tokenized = bm25s.tokenize(self.corpus)
+        retriever = bm25s.BM25()
+        retriever.index(tokenized)
+        retriever.save("data/processed/bm25_index")
