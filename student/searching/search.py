@@ -2,7 +2,8 @@ import bm25s
 import json
 import uuid
 
-from student.models import MinimalSource, MinimalSearchResults, RagDataset
+from student.models import (
+    MinimalSource, MinimalSearchResults, RagDataset, UnansweredQuestion)
 from student.color import RESET, RED
 
 
@@ -15,18 +16,15 @@ class Search:
         except (FileNotFoundError, PermissionError):
             raise ValueError
 
-    def search(self, prompt: str, k: int,
-               question_id: str | None = None) -> MinimalSearchResults:
-        if question_id is None:
-            question_id = str(uuid.uuid4())
-        tokenized_prompt = bm25s.tokenize(prompt)
+    def search(self, question: UnansweredQuestion,
+               k: int) -> MinimalSearchResults:
+        tokenized_prompt = bm25s.tokenize(question.question)
 
         idxs, _ = self.retriever.retrieve(tokenized_prompt, k=k)
         sources = [MinimalSource(**self.chunks[i]) for i in idxs[0]]
 
         return (MinimalSearchResults(
-            question_id=question_id,
-            question=prompt,
+            **question.model_dump(),
             retrieved_sources=sources
         ))
 
@@ -42,5 +40,5 @@ class Search:
                   f"be written {RESET}")
         out = []
         for data in rag_dataset.rag_questions:
-            out.append(self.search(data.question, k, data.question_id))
+            out.append(self.search(data, k))
         return (out)
