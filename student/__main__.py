@@ -2,6 +2,7 @@ from fire import Fire
 from student.indexing import Index
 from student.searching import Search
 from student.models import UnansweredQuestion
+from student.answering import Answer
 
 
 def index(max_chunck_size: int = 2000) -> None:
@@ -22,7 +23,10 @@ def search_dataset(dataset_path: str, k: int = 10,
 
 def answer(prompt: str, k: int = 10) -> None:
     question = UnansweredQuestion(question=prompt)
-    pass
+    answer = Answer().answer(question, k)
+    print(question.question)
+    print("\nAnswer:")
+    print(answer.answer)
 
 
 if (__name__ == "__main__"):

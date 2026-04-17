@@ -31,6 +31,7 @@ MYPY_FLAGS := \
 
 install: $(UV_LOCK)
 	$(UV) sync --no-install-project
+	ollama pull qwen3:0.6b
 
 install-dev: $(UV_LOCK)
 	$(UV) sync --group dev --no-install-project

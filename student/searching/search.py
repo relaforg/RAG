@@ -1,9 +1,9 @@
 import bm25s
 import json
-import uuid
 
 from student.models import (
-    MinimalSource, MinimalSearchResults, RagDataset, UnansweredQuestion)
+    MinimalSource, MinimalSearchResults, RagDataset, UnansweredQuestion
+)
 from student.color import RESET, RED
 
 
