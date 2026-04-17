@@ -47,7 +47,7 @@ class Search:
         save_dir = Path(save_directory)
         save_dir.mkdir(parents=True, exist_ok=True)
         try:
-            with open(save_dir / "student_search_results.json", "w") as file:
+            with open(save_dir / dataset_path.split("/")[-1], "w") as file:
                 file.write(json.dumps(
                     StudentSearchResults(
                         search_results=out,

@@ -5,6 +5,8 @@ from student.color import RESET, RED
 
 class Evaluate:
     def overlap(self, src1: MinimalSource, src2: MinimalSource) -> float:
+        if (src1.file_path != src2.file_path):
+            return (0)
         overlap = max(
             min(src1.last_character_index, src2.last_character_index) -
             max(src1.first_character_index, src2.first_character_index),
@@ -41,7 +43,7 @@ class Evaluate:
             if "sources" in q
         }
 
-        for i in [1, 3, 5, 10]:
+        for i in [1, 3, 5, 10, 15, 25]:
             if (student_results.k < i):
                 break
             self.compute_recall(
@@ -50,16 +52,16 @@ class Evaluate:
     def compute_recall(self, searches: list[MinimalSearchResults],
                        ground_truth: dict[str, list[MinimalSource]],
                        k: int) -> None:
-        count = 0
-        is_found = False
+        total_score = 0.0
         for search in searches:
-            for source in search.retrieved_sources[:k]:
-                for truth in ground_truth.get(search.question_id, []):
-                    if (self.overlap(source, truth)):
-                        count += 1
-                        is_found = True
+            correct = ground_truth.get(search.question_id, [])
+            if not correct:
+                continue
+            found = 0
+            for truth in correct:
+                for source in search.retrieved_sources[:k]:
+                    if (self.overlap(source, truth) >= 0.05):
+                        found += 1
                         break
-                if (is_found):
-                    is_found = False
-                    break
-        print(f"Recall@{k}: {count/len(searches)}")
+            total_score += found / len(correct)
+        print(f"Recall@{k}: {total_score / len(searches):.3f}")
