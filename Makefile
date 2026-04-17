@@ -36,7 +36,17 @@ install: $(UV_LOCK)
 install-dev: $(UV_LOCK)
 	$(UV) sync --group dev --no-install-project
 
-run: install
+serve:
+	ollama ps || (OLLAMA_NUM_PARALLEL=16 ollama serve > /dev/null 2>&1 & echo $$! > .ollama.pid && until ollama ps > /dev/null 2>&1; do sleep 0.5; done)
+
+stop:
+	@if [ -f .ollama.pid ]; then \
+		kill $$(cat .ollama.pid) && rm .ollama.pid; \
+	else \
+		echo "No ollama server started by make"; \
+	fi
+
+run: install serve
 	$(UV) run -m student
 
 clean:
@@ -53,4 +63,4 @@ lint: install-dev
 $(UV_LOCK): $(PYPROJECT_TOML) | $(PYTHON)
 	$(UV) lock
 
-.PHONY: install install-dev run debug lint clean
+.PHONY: install install-dev run debug lint clean serve stop

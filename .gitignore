@@ -2,3 +2,5 @@ __pycache__
 .mypy_cache
 en.subject.pdf
 data/processed/*
+data/output/*
+.ollama.pid
