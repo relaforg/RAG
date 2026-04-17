@@ -12,7 +12,14 @@ from student.color import GREEN, RESET, BRIGHT_BLACK
 
 
 class Index:
+    """Builds a BM25 searchable index from the vLLM repository."""
+
     def __init__(self, max_chunk_size: int):
+        """Initialize splitters and corpus storage.
+
+        Args:
+            max_chunk_size: Maximum number of characters per chunk.
+        """
         self.dataset_path = "data/raw/vllm-0.10.1"
         self.max_chunk_size = max_chunk_size
         self.python_splitter = RecursiveCharacterTextSplitter.from_language(
@@ -27,7 +34,12 @@ class Index:
         )
         self.corpus: list[str] = []
 
-    def _split_mardowns(self, out: list[MinimalSource]):
+    def _split_mardowns(self, out: list[MinimalSource]) -> None:
+        """Chunk all Markdown files and append sources to out.
+
+        Args:
+            out: List to append MinimalSource chunks to.
+        """
         md_files = Path(self.dataset_path).rglob("*.md")
         for md in tqdm(md_files, desc="Indexing .md files", unit=" file"):
             idx = 0
@@ -41,7 +53,12 @@ class Index:
                 ))
                 idx += len(chunck)
 
-    def _split_pythons(self, out: list[MinimalSource]):
+    def _split_pythons(self, out: list[MinimalSource]) -> None:
+        """Chunk all Python files and append sources to out.
+
+        Args:
+            out: List to append MinimalSource chunks to.
+        """
         py_files = Path(self.dataset_path).rglob("*.py")
         for py in tqdm(py_files, desc="Indexing .py files", unit=" file"):
             idx = 0
@@ -56,6 +73,7 @@ class Index:
                 idx += len(chunck)
 
     def index(self) -> None:
+        """Index all repository files and save the BM25 index to disk."""
         out: list[MinimalSource] = []
         self._split_mardowns(out)
         self._split_pythons(out)

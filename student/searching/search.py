@@ -10,7 +10,10 @@ from student.color import RESET, RED
 
 
 class Search:
-    def __init__(self):
+    """Retrieves relevant chunks from the BM25 index."""
+
+    def __init__(self) -> None:
+        """Load the BM25 index and chunks from disk."""
         self.retriever = bm25s.BM25.load("data/processed/bm25_index")
         try:
             with open("data/processed/chunks", "r") as file:
@@ -20,6 +23,15 @@ class Search:
 
     def search(self, question: UnansweredQuestion,
                k: int) -> MinimalSearchResults:
+        """Retrieve top-k sources for a single question.
+
+        Args:
+            question: The question to search for.
+            k: Number of results to retrieve.
+
+        Returns:
+            Search results with the top-k retrieved sources.
+        """
         tokenized_prompt = bm25s.tokenize(question.question)
 
         idxs, _ = self.retriever.retrieve(tokenized_prompt, k=k)
@@ -32,6 +44,13 @@ class Search:
 
     def search_dataset(self, dataset_path: str, k: int,
                        save_directory: str) -> None:
+        """Search all questions in a dataset and save results to disk.
+
+        Args:
+            dataset_path: Path to the dataset JSON file.
+            k: Number of results to retrieve per question.
+            save_directory: Directory where results will be saved.
+        """
         try:
             with open(dataset_path, "r") as file:
                 rag_dataset = RagDataset(
