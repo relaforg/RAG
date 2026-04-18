@@ -48,7 +48,7 @@ def search_dataset(dataset_path: str, k: int = 10,
                             hybrid)
 
 
-def answer(prompt: str, k: int = 10) -> None:
+def answer(prompt: str, k: int = 10, cache: bool = True) -> None:
     """Answer a single question using retrieved context and print the result.
 
     Args:
@@ -56,21 +56,22 @@ def answer(prompt: str, k: int = 10) -> None:
         k: Number of sources to retrieve.
     """
     question = UnansweredQuestion(question=prompt)
-    answer = Answer().answer(question, k)
+    answer = Answer().answer(question, k, cache=cache)
     print(question.question)
     print("\nAnswer:")
     print(answer.answer)
 
 
 def answer_dataset(student_search_result_path: str,
-                   save_directory: str = DEFAULT_ANSWER_DIR) -> None:
+                   save_directory: str = DEFAULT_ANSWER_DIR,
+                   cache: bool = True) -> None:
     """Generate answers for all questions in a search results file.
 
     Args:
         student_search_result_path: Path to the search results JSON.
         save_directory: Directory where answered results will be saved.
     """
-    Answer().answer_dataset(student_search_result_path, save_directory)
+    Answer().answer_dataset(student_search_result_path, save_directory, cache)
 
 
 def evaluate(student_answer_path: str, dataset_path: str) -> None:

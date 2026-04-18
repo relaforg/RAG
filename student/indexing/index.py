@@ -98,6 +98,9 @@ class Index:
 
     def index(self, chroma: bool) -> None:
         """Index all repository files and save the BM25 index to disk."""
+        cache = Path() / "data" / "processed" / "cache"
+        if cache.exists():
+            cache.unlink()
         out: list[MinimalSource] = []
         next_id = self._split_mardowns(out, chroma)
         self._split_pythons(out, chroma, chunk_id=next_id)

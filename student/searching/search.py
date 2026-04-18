@@ -5,8 +5,12 @@ from pathlib import Path
 import chromadb
 
 from student.models import (
-    MinimalSource, MinimalSearchResults, RagDataset, UnansweredQuestion,
-    StudentSearchResults
+    MinimalSource,
+    MinimalSearchResults,
+    RagDataset,
+    UnansweredQuestion,
+    StudentSearchResults,
+    AnsweredQuestion
 )
 from student.color import RESET, RED
 from .query_expander import QueryExpander
