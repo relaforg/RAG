@@ -2,6 +2,8 @@ import bm25s
 import json
 import tqdm
 from pathlib import Path
+import chromadb
+from chromadb.utils import embedding_functions
 
 from student.models import (
     MinimalSource, MinimalSearchResults, RagDataset, UnansweredQuestion,
@@ -23,57 +25,57 @@ class Search:
                 self.chunks = json.load(file)
         except (FileNotFoundError, PermissionError):
             raise ValueError
+        self.client = chromadb.PersistentClient(path="data/chroma")
+        ef = embedding_functions.SentenceTransformerEmbeddingFunction(
+            "all-MiniLM-L6-v2")
+        self.collection = self.client.get_or_create_collection(
+            "chunks", embedding_function=ef)
 
-    def _unit_search(self, question: UnansweredQuestion,
-                     k: int) -> MinimalSearchResults:
-        """Retrieve top-k sources for a single question.
-
-        Args:
-            question: The question to search for.
-            k: Number of results to retrieve.
-
-        Returns:
-            Search results with the top-k retrieved sources.
-        """
-        tokenized_prompt = bm25s.tokenize(question.question)
-
-        idxs, _ = self.retriever.retrieve(tokenized_prompt, k=k)
-        sources = [MinimalSource(**self.chunks[i]) for i in idxs[0]]
-
-        return (MinimalSearchResults(
-            **question.model_dump(),
-            retrieved_sources=sources
-        ))
-
-    def _expanded_search(self, question: UnansweredQuestion,
-                         k: int) -> MinimalSearchResults:
-        questions = [question.question] + \
-            self.expander.expand(question.question)
-
-        score: dict[int, float] = {}
-        for q in questions:
-            tokenized = bm25s.tokenize(q)
-            idxs, _ = self.retriever.retrieve(tokenized)
-            for rank, i in enumerate(idxs[0]):
-                score[i] = score.get(i, 0) + 1 / (rank + 1)
-
+    def _rrf(self, rankings: list[list[str]], k: int) -> list[MinimalSource]:
+        score: dict[str, float] = {}
+        for ranked_ids in rankings:
+            for rank, doc_id in enumerate(ranked_ids):
+                score[doc_id] = score.get(doc_id, 0) + 1 / (rank + 1)
         top_k = sorted(score, key=score.__getitem__, reverse=True)[:k]
-        sources = [MinimalSource(**self.chunks[i]) for i in top_k]
+        return [MinimalSource(**self.chunks[int(i)]) for i in top_k]
 
-        return (MinimalSearchResults(
-            **question.model_dump(),
-            retrieved_sources=sources
-        ))
+    def _bm25_ids(self, query: str, k: int) -> list[str]:
+        tokenized = bm25s.tokenize(query)
+        idxs, _ = self.retriever.retrieve(tokenized, k=k)
+        return [str(i) for i in idxs[0]]
+
+    def _chroma_ids(self, query: str, k: int) -> list[str]:
+        return self.collection.query(
+            query_texts=[query], n_results=k)["ids"][0]
 
     def search(self, question: UnansweredQuestion,
                k: int,
-               query_expansion: bool) -> MinimalSearchResults:
-        if (query_expansion):
-            return (self._expanded_search(question, k))
-        return (self._unit_search(question, k))
+               query_expansion: bool = False,
+               hybrid: bool = False) -> MinimalSearchResults:
+        queries = (
+            [question.question] + self.expander.expand(question.question)
+            if query_expansion else [question.question]
+        )
+        rankings = []
+        for q in queries:
+            rankings.append(self._bm25_ids(q, k))
+            if hybrid:
+                rankings.append(self._chroma_ids(q, k))
+
+        if len(rankings) == 1:
+            sources = [MinimalSource(**self.chunks[int(i)])
+                       for i in rankings[0]]
+        else:
+            sources = self._rrf(rankings, k)
+
+        return MinimalSearchResults(
+            **question.model_dump(),
+            retrieved_sources=sources
+        )
 
     def search_dataset(self, dataset_path: str, k: int,
-                       save_directory: str, query_expansion: bool) -> None:
+                       save_directory: str, query_expansion: bool,
+                       hybrid: bool = False) -> None:
         """Search all questions in a dataset and save results to disk.
 
         Args:
@@ -81,10 +83,7 @@ class Search:
             k: Number of results to retrieve per question.
             save_directory: Directory where results will be saved.
         """
-        if (query_expansion):
-            search = self._expanded_search
-        else:
-            search = self._unit_search
+        def _search(q, k): return self.search(q, k, query_expansion, hybrid)
         try:
             with open(dataset_path, "r") as file:
                 rag_dataset = RagDataset(
@@ -96,7 +95,7 @@ class Search:
             return
         out = []
         for data in tqdm.tqdm(rag_dataset.rag_questions):
-            out.append(search(data, k))
+            out.append(_search(data, k))
         save_dir = Path(save_directory)
         save_dir.mkdir(parents=True, exist_ok=True)
         try:

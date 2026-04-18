@@ -9,38 +9,43 @@ from student.evaluate import Evaluate
 DEFAULT_ANSWER_DIR = "data/output/search_results_and_answer"
 
 
-def index(max_chunck_size: int = 2000) -> None:
+def index(max_chunck_size: int = 2000, chroma: bool = False) -> None:
     """Index the vLLM repository and save the BM25 index to disk.
 
     Args:
         max_chunck_size: Maximum number of characters per chunk.
     """
-    Index(max_chunck_size).index()
+    Index(max_chunck_size).index(chroma)
 
 
-def search(prompt: str, k: int = 10) -> None:
+def search(prompt: str, k: int = 10, query_expansion: bool = False,
+           hybrid: bool = False) -> None:
     """Search the index for a single query and print results.
 
     Args:
         prompt: The search query.
         k: Number of results to retrieve.
+        hybrid: Combine BM25 and Chroma results via RRF.
     """
     question = UnansweredQuestion(question=prompt)
-    answer = Search().search(question, k)
+    answer = Search().search(question, k, query_expansion, hybrid)
     print(answer)
 
 
 def search_dataset(dataset_path: str, k: int = 10,
                    save_directory: str = "data/output/search_results",
-                   query_expansion: bool = False) -> None:
+                   query_expansion: bool = False,
+                   hybrid: bool = False) -> None:
     """Search all questions in a dataset and save results to disk.
 
     Args:
         dataset_path: Path to the dataset JSON file.
         k: Number of results to retrieve per question.
         save_directory: Directory where results will be saved.
+        hybrid: Combine BM25 and Chroma results via RRF.
     """
-    Search().search_dataset(dataset_path, k, save_directory, query_expansion)
+    Search().search_dataset(dataset_path, k, save_directory, query_expansion,
+                            hybrid)
 
 
 def answer(prompt: str, k: int = 10) -> None:

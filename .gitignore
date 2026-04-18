@@ -3,4 +3,5 @@ __pycache__
 en.subject.pdf
 data/processed/*
 data/output/*
+data/chroma/*
 .ollama.pid
