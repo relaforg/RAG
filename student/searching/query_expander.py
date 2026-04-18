@@ -4,7 +4,7 @@ from langchain_core.output_parsers import StrOutputParser
 
 
 class QueryExpander:
-    def __init__(self):
+    def __init__(self) -> None:
         self.llm = ChatOllama(model="qwen3:0.6b")
         self.prompt = ChatPromptTemplate.from_messages([
             ("human", "Generate 3 search query variants for: {question}"

@@ -29,7 +29,7 @@ class Search:
         ef = embedding_functions.SentenceTransformerEmbeddingFunction(
             "all-MiniLM-L6-v2")
         self.collection = self.client.get_or_create_collection(
-            "chunks", embedding_function=ef)
+            "chunks", embedding_function=ef)  # type: ignore[arg-type]
 
     def _rrf(self, rankings: list[list[str]], k: int) -> list[MinimalSource]:
         score: dict[str, float] = {}
@@ -83,7 +83,8 @@ class Search:
             k: Number of results to retrieve per question.
             save_directory: Directory where results will be saved.
         """
-        def _search(q, k): return self.search(q, k, query_expansion, hybrid)
+        def _search(q: UnansweredQuestion, k: int) -> MinimalSearchResults:
+            return self.search(q, k, query_expansion, hybrid)
         try:
             with open(dataset_path, "r") as file:
                 rag_dataset = RagDataset(

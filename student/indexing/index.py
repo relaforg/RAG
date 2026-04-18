@@ -40,7 +40,7 @@ class Index:
             "all-MiniLM-L6-v2")
         self.client.delete_collection("chunks")
         self.collection = self.client.get_or_create_collection(
-            "chunks", embedding_function=ef)
+            "chunks", embedding_function=ef)  # type: ignore[arg-type]
 
     def _split_mardowns(self, out: list[MinimalSource], chroma: bool,
                         chunk_id: int = 0) -> int:
