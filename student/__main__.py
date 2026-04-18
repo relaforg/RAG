@@ -31,7 +31,8 @@ def search(prompt: str, k: int = 10) -> None:
 
 
 def search_dataset(dataset_path: str, k: int = 10,
-                   save_directory: str = "data/output/search_results") -> None:
+                   save_directory: str = "data/output/search_results",
+                   query_expansion: bool = False) -> None:
     """Search all questions in a dataset and save results to disk.
 
     Args:
@@ -39,7 +40,7 @@ def search_dataset(dataset_path: str, k: int = 10,
         k: Number of results to retrieve per question.
         save_directory: Directory where results will be saved.
     """
-    Search().search_dataset(dataset_path, k, save_directory)
+    Search().search_dataset(dataset_path, k, save_directory, query_expansion)
 
 
 def answer(prompt: str, k: int = 10) -> None:
