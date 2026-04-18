@@ -1,16 +1,22 @@
-from langchain_ollama import ChatOllama
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import StrOutputParser
+from openai import OpenAI
 
 
 class QueryExpander:
     def __init__(self) -> None:
-        self.llm = ChatOllama(model="qwen3:0.6b")
-        self.prompt = ChatPromptTemplate.from_messages([
-            ("human", "Generate 3 search query variants for: {question}"
-             "\nReturn one per line, no numbering.")
-        ])
-        self.chain = self.prompt | self.llm | StrOutputParser()
+        self.client = OpenAI(
+            base_url="http://localhost:11434/v1",
+            api_key="unused"
+        )
+        self.model = "qwen3:0.6b"
 
     def expand(self, prompt: str) -> list[str]:
-        return (self.chain.invoke({"question": prompt}).splitlines())
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=[{
+                "role": "user",
+                "content": (f"Generate 3 search query variants for: {prompt}"
+                            "\nReturn one per line, no numbering.")
+            }]
+        )
+        content = response.choices[0].message.content or ""
+        return content.splitlines()

@@ -2,8 +2,8 @@ import asyncio
 import json
 import tqdm
 from pathlib import Path
-from langchain_ollama import ChatOllama
-from langchain_core.prompts import ChatPromptTemplate
+from openai import OpenAI, AsyncOpenAI
+from openai.types.chat import ChatCompletionUserMessageParam
 
 from student.models import (UnansweredQuestion,
                             AnsweredQuestion,
@@ -13,76 +13,57 @@ from student.models import (UnansweredQuestion,
                             MinimalAnswer)
 from student.searching import Search
 
+OLLAMA_BASE_URL = "http://localhost:11434/v1"
+MODEL = "qwen3:0.6b"
+PROMPT_TEMPLATE = "Context:\n{context}\n\nQuestion: {question}"
+
 
 class Answer:
-    """Generate natural language answers using an LLM.
-
-    Uses context retrieved from the BM25 knowledge base.
-    """
+    """Generate natural language answers using an LLM."""
 
     def __init__(self) -> None:
-        """Initialize the LLM, prompt template, and chain."""
-        self.llm = ChatOllama(model="qwen3:0.6b")
-        self.prompt = ChatPromptTemplate.from_messages([
-            ("human", "Context:\n{context}\n\nQuestion: {question}")
-        ])
-        self.chain = self.prompt | self.llm
+        self.client = OpenAI(base_url=OLLAMA_BASE_URL, api_key="unused")
+        self.async_client = AsyncOpenAI(
+            base_url=OLLAMA_BASE_URL, api_key="unused")
+
+    def _build_messages(
+            self, question: str,
+            context: str) -> list[ChatCompletionUserMessageParam]:
+        return [ChatCompletionUserMessageParam(
+            role="user",
+            content=PROMPT_TEMPLATE.format(context=context, question=question)
+        )]
 
     def answer(self, question: UnansweredQuestion, k: int,
                sources: list[MinimalSource] | None = None) -> AnsweredQuestion:
-        """Answer a single question using retrieved context.
-
-        Args:
-            question: The question to answer.
-            k: Number of sources to retrieve if sources is not provided.
-            sources: Pre-retrieved sources; fetched automatically if None.
-
-        Returns:
-            An AnsweredQuestion with sources and generated answer.
-        """
-        if (not sources):
+        if not sources:
             sources = Search().search(question, k).retrieved_sources
         context = "\n\n".join(s.text for s in sources)
-        answer = self.chain.invoke({
-            "context": context,
-            "question": question.question
-        })
-        return (AnsweredQuestion(
-            **question.model_dump(),
-            sources=sources,
-            answer=str(answer.content)
-        ))
-
-    async def _answer_async(self, question: UnansweredQuestion,
-                            sources: list[MinimalSource]) -> AnsweredQuestion:
-        """Async version of answer for concurrent batch processing.
-
-        Args:
-            question: The question to answer.
-            sources: Pre-retrieved sources to use as context.
-
-        Returns:
-            An AnsweredQuestion with sources and generated answer.
-        """
-        context = "\n\n".join(s.text for s in sources)
-        answer = await self.chain.ainvoke({
-            "context": context,
-            "question": question.question
-        })
+        response = self.client.chat.completions.create(
+            model=MODEL,
+            messages=self._build_messages(question.question, context)
+        )
         return AnsweredQuestion(
             **question.model_dump(),
             sources=sources,
-            answer=str(answer.content)
+            answer=str(response.choices[0].message.content)
+        )
+
+    async def _answer_async(self, question: UnansweredQuestion,
+                            sources: list[MinimalSource]) -> AnsweredQuestion:
+        context = "\n\n".join(s.text for s in sources)
+        response = await self.async_client.chat.completions.create(
+            model=MODEL,
+            messages=self._build_messages(question.question, context)
+        )
+        return AnsweredQuestion(
+            **question.model_dump(),
+            sources=sources,
+            answer=str(response.choices[0].message.content)
         )
 
     def answer_dataset(self, student_search_result_path: str,
                        save_directory: str) -> None:
-        """Generate answers for all questions in a search results file.
-
-        Args:
-            student_search_result_path: Path to the search results JSON.
-            save_directory: Directory where answered results will be saved.
-        """
         try:
             with open(student_search_result_path, "r") as file:
                 data = StudentSearchResults.model_validate(json.load(file))

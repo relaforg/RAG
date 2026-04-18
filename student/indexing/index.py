@@ -7,7 +7,6 @@ from langchain_text_splitters import (
 )
 from pathlib import Path
 import chromadb
-from chromadb.utils import embedding_functions
 
 from student.models import MinimalSource
 from student.color import GREEN, RESET, BRIGHT_BLACK
@@ -36,11 +35,8 @@ class Index:
         )
         self.corpus: list[str] = []
         self.client = chromadb.PersistentClient(path="data/chroma")
-        ef = embedding_functions.SentenceTransformerEmbeddingFunction(
-            "all-MiniLM-L6-v2")
         self.client.delete_collection("chunks")
-        self.collection = self.client.get_or_create_collection(
-            "chunks", embedding_function=ef)  # type: ignore[arg-type]
+        self.collection = self.client.get_or_create_collection("chunks")
 
     def _split_mardowns(self, out: list[MinimalSource], chroma: bool,
                         chunk_id: int = 0) -> int:

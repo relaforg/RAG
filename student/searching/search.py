@@ -3,7 +3,6 @@ import json
 import tqdm
 from pathlib import Path
 import chromadb
-from chromadb.utils import embedding_functions
 
 from student.models import (
     MinimalSource, MinimalSearchResults, RagDataset, UnansweredQuestion,
@@ -26,10 +25,7 @@ class Search:
         except (FileNotFoundError, PermissionError):
             raise ValueError
         self.client = chromadb.PersistentClient(path="data/chroma")
-        ef = embedding_functions.SentenceTransformerEmbeddingFunction(
-            "all-MiniLM-L6-v2")
-        self.collection = self.client.get_or_create_collection(
-            "chunks", embedding_function=ef)  # type: ignore[arg-type]
+        self.collection = self.client.get_or_create_collection("chunks")
 
     def _rrf(self, rankings: list[list[str]], k: int) -> list[MinimalSource]:
         score: dict[str, float] = {}
